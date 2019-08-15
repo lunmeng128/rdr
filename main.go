@@ -15,6 +15,7 @@
 package main
 
 import (
+	"github.com/dustin/go-humanize"
 	"net/http"
 	"os"
 
@@ -27,7 +28,7 @@ import (
 	"github.com/dongmx/rdb"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/julienschmidt/httprouter"
-	"github.com/xueqiu/rdr/static"
+	"github.com/lunmeng128/rdr/static"
 	"encoding/json"
 )
 
@@ -177,6 +178,24 @@ func keys(c *cli.Context) {
 	}
 }
 
+func GetKeySize(c *cli.Context) {
+	if c.NArg() < 1 {
+		fmt.Fprintln(c.App.ErrWriter, "key requires at least 1 argument")
+		cli.ShowCommandHelp(c, "key")
+		return
+	}
+	keyName:= c.String("key")
+	for _, filepath := range c.Args() {
+		decoder := NewDecoder()
+		go decode(c, decoder, filepath)
+		for e := range decoder.Entries {
+			if keyName == e.Key {
+				fmt.Println(humanize.Bytes(e.Bytes))
+			}
+		}
+	}
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "rdr"
@@ -209,6 +228,19 @@ func main() {
 			Usage:     "get all keys from rdbfile",
 			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
 			Action:    keys,
+		},
+		cli.Command{
+			Name: "size",
+			Usage: "get key size",
+			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "key, k",
+					Value: "",
+					Usage: "key name",
+				},
+			},
+			Action: GetKeySize,
 		},
 	}
 	app.CommandNotFound = func(c *cli.Context, command string) {
